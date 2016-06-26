@@ -55,10 +55,10 @@ def get_user():
     def run(stmt):
         rs = stmt.execute()
         for row in rs:
-            al.append(row)
+            al.append(dict(row.items()))
     s = users.select()
     run(s)
-    return jsonify(str(al))
+    return jsonify(al)
 
 @app.route('/api/users/<int:user_id>', methods=['GET'])
 def get_user1(user_id):
@@ -67,11 +67,11 @@ def get_user1(user_id):
     def run(stmt):
         rs = stmt.execute()
         for row in rs:
-            al.append(row)
+            al.append(dict(row.items()))
     s = users.select()
     run(s)
-    user = filter(lambda x:x[0] == user_id, al)
-    return str(user)
+    user = filter(lambda x:x['user_id'] == user_id, al)
+    return jsonify(user)
 
 @app.route('/api/tasks', methods=['GET'])
 def get_tasks():
