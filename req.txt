@@ -1,0 +1,130 @@
+Flask:
+Rest API for tasks management.
+
+Requirements: multi users, secure passwords storage, results in json, shared tasks.
+
+Roles: admin and user.
+
+Data model:
+1. User: id, email, password, name, info, is_admin.
+2. Task (id, title, description, status)
+3. Attachment (id, task_id, file_url, owner)
+All models should have fields created_at and updated_at. We should have one to many relationship between Task and Attachment, and many to many between
+User and Task.
+
+Endpoints:
+1. /login : user's email and password, returns token. 
+2. /users - only for admin - create new user, get user's list, get specific user info, update user info (just one field like name or info), delete user.
+3. /tasks - create, get, edit, delete. User is able to see only his tasks, admin - all. Possibility to return all tasks list and specific task info (/tasks/<id>).
+4. /attachments - create, get, delete. Also endpoint to return attachments for task /tasks/<id>attachments
+5. /tasks_share (task_id, user_id) -> shares task with other user.
+
+2-5 should use tokens from 1 for authentication and authorization.
+
+
+
+#!venv/bin/python
+
+from sqlalchemy import *
+from sqlalchemy.orm import relationship
+from sqlalchemy.ext.declarative import declarative_base
+import os
+import hashlib
+
+
+Base = declarative_base()
+basedir = os.path.abspath(os.path.dirname(__file__))
+
+SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'app2.db')
+
+db = create_engine(SQLALCHEMY_DATABASE_URI)
+
+db.echo = False  # Try changing this to True and see what happens
+
+#metadata = MetaData(db)
+
+association_table = Table('association', Base.metadata,
+    Column('user_id', Integer, ForeignKey('users.user_id')),
+    Column('task_id', Integer, ForeignKey('tasks.task_id'))
+)
+
+class User(Base):
+    """docstring for User"""
+    __tablename__ = 'users'
+    user_id = Column(Integer, primary_key=True),
+    name = Column(String(40)),
+    email = Column(String(100)),
+    password = Column(String),
+    info = Column(String),
+    is_admin = Column(Integer),
+    created_at = Column(Integer),
+    updated_at = Column( Integer),
+    children = relationship(
+        "Tasks",
+        secondary=association_table,
+        back_populates="parents")
+
+
+users = Table('users', metadata,
+    Column('user_id', Integer, primary_key=True),
+    Column('name', String(40)),
+    Column('email', String(100)),
+    Column('password', String),
+    Column('info', String),
+    Column('is_admin', Integer),
+    Column('created_at', Integer),
+    Column('updated_at', Integer),
+)
+# users.create()
+class Tasks(Base):
+    """docstring for Tasks"""
+    __tablename__ = 'tasks'
+    task_id = Column(Integer, primary_key=True),
+    title = Column(String(40)),
+    description = Column(String(200)),
+    status = Column(String(20)),
+    created_at = Column(Integer),
+    updated_at = Column( Integer),
+    parents = relationship(
+        "Users",
+        secondary=association_table,
+        back_populates="children")
+        
+tasks = Table('tasks', metadata,
+    Column('task_id', Integer, primary_key=True),
+    Column('title', String(40)),
+    Column('description', String(200)),
+    Column('status', String(20)),
+    Column('created_at', Integer),
+    Column('updated_at', Integer),
+)
+
+attachments = Table('attachments', metadata,
+    Column('attachment_id', Integer, primary_key=True),
+    Column('task_id', Integer),
+    Column('file_url', String),
+    Column('owner', Integer),
+    Column('created_at', Integer),
+    Column('updated_at', Integer),
+)
+
+id, task_id, file_url, owner
+def create_user(email, password, name, info, is_admin):
+    i = users.insert()
+    i.execute(email = email, password = hashlib.md5(password).hexdigest(), name = name, info = info, is_admin = 0)
+
+
+
+#create_user('ema1','pas1','nam1','info1', 1)
+
+
+s = users.select()
+rs = s.execute()
+
+row = rs.fetchone()
+print 'Id:', row[0]
+print 'Name:', row['name']
+print 'Password:', row[users.c.password]
+
+for row in rs:
+    print row.name, 'is years old'
